@@ -68,3 +68,23 @@ def test_网络异常包装为_LLMError():
 
     with pytest.raises(LLMError, match="请求失败"):
         complete("hi", **BASE, client=make_client(handler))
+
+
+def test_2xx_但响应不是_JSON_时抛_LLMError():
+    """中转站过载时常返回 HTML 错误页，不该以 JSONDecodeError 砸到用户脸上。"""
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200, text="<html>502 Bad Gateway</html>", headers={"content-type": "text/html"}
+        )
+
+    with pytest.raises(LLMError, match="不是 JSON"):
+        complete("hi", **BASE, client=make_client(handler))
+
+
+def test_2xx_但_JSON_不是对象时抛_LLMError():
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json=[1, 2, 3])
+
+    with pytest.raises(LLMError, match="结构"):
+        complete("hi", **BASE, client=make_client(handler))
