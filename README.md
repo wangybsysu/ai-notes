@@ -4,15 +4,16 @@ Obsidian 库攒了几百篇笔记，回头找东西全靠搜标题。这个小�
 
 ## 安装
 
-```bash
-pipx install ai-notes
-```
-
-或者在克隆下来的目录里：
+还没发到 PyPI，从源码装：
 
 ```bash
-pip install -e .
+git clone https://github.com/wangybsysu/ai-notes.git
+cd ai-notes
+python -m venv .venv
+.venv/bin/pip install -e .
 ```
+
+已经有虚拟环境的话，一条 `pip install -e .` 就够了。
 
 ## 用法
 
@@ -57,7 +58,11 @@ tags:
 - 正文超过 8000 字会截断后再送模型——笔记太长时摘要质量本来就有限，也没必要为此烧额度。
 - 空文件和纯空白文件直接跳过。
 - `.` 开头的隐藏文件（比如 `.draft.md`）不处理。
-- front-matter 解析失败的文件会跳过并继续，不会让整批处理中断。
+- 写回会让整块 front-matter 过一遍 YAML 序列化：**手写的 YAML 注释和原有排版不会保留**，
+  各字段的值本身不变。介意的话先 `--dry-run` 或者用 git 兜底。
+- front-matter 顶层不是映射的文件（比如整块是一个列表）会**整篇跳过**。这类结构解析后
+  拿不到原有内容，回写等于把它们删掉，所以宁可不处理。
+- front-matter 解析失败的文件同样跳过并继续，不会让整批处理中断。
 
 ## 配置
 
