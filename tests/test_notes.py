@@ -63,6 +63,27 @@ def test_limit_限制处理数量(tmp_path):
     assert len(changed) == 2
 
 
+def test_前置元数据不是映射时整篇跳过而不是抹掉内容(tmp_path):
+    """`---` 块里是列表/标量时，frontmatter 解析出的 metadata 是空 dict，
+    直接回写会把整块原内容删掉——这是不可逆的用户数据丢失。"""
+    path = write(tmp_path, "a.md", "---\n- 待办一\n- 待办二\n---\n正文")
+    before = path.read_text(encoding="utf-8")
+
+    changed = apply_to_notes(tmp_path, "summary", lambda _prompt: "摘要")
+
+    assert changed == []
+    assert path.read_text(encoding="utf-8") == before
+
+
+def test_前置元数据是标量时也跳过(tmp_path):
+    path = write(tmp_path, "a.md", "---\nhello\n---\n正文")
+    before = path.read_text(encoding="utf-8")
+
+    apply_to_notes(tmp_path, "summary", lambda _prompt: "摘要")
+
+    assert path.read_text(encoding="utf-8") == before
+
+
 def test_超长正文被截断后才送模型(tmp_path):
     write(tmp_path, "a.md", "字" * 20000)
     seen = {}
