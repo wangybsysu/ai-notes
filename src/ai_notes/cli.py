@@ -17,18 +17,37 @@ def _run(root: Path, mode: str, dry_run: bool, limit: int | None) -> None:
         typer.echo(f"目录不存在：{root}", err=True)
         raise typer.Exit(code=1)
 
+    done: list[Path] = []
+
+    def on_change(path: Path, value: str) -> None:
+        done.append(path)
+        if dry_run:
+            # dry-run 要能看出「改成什么样」，不只是「改哪篇」
+            typer.echo(f"  {path}")
+            typer.echo(f"      {value}")
+
     try:
         changed = apply_to_notes(
-            root, mode, lambda prompt: complete(prompt), dry_run=dry_run, limit=limit
+            root,
+            mode,
+            lambda prompt: complete(prompt),
+            dry_run=dry_run,
+            limit=limit,
+            on_change=on_change,
         )
     except LLMError as exc:
+        if done:
+            typer.echo(f"已处理 {len(done)} 篇后中止，以下文件已被改动：", err=True)
+            for path in done:
+                typer.echo(f"  {path}", err=True)
         typer.echo(f"调用模型失败：{exc}", err=True)
         raise typer.Exit(code=1) from exc
 
     verb = "将更新" if dry_run else "已更新"
     typer.echo(f"{verb} {len(changed)} 篇笔记")
-    for path in changed:
-        typer.echo(f"  {path}")
+    if not dry_run:
+        for path in changed:
+            typer.echo(f"  {path}")
 
 
 @app.command()
